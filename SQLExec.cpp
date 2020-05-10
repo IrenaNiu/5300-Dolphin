@@ -296,22 +296,21 @@ QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
 
 	ValueDicts* rows = new ValueDicts;
 
-	//Use project method to get all entries of column names of the table
-	// iterate through the handles of the specific table targeted
+	// get all entries of column names of the table
+	
 	for (unsigned int i = 0; i < handles->size(); i++) {
 		// get each column name and teh data type from the table.
-		// an example would be to return "x (int)" "y(int)" "z(int)" on goober.  
+		  
 		ValueDict* row = columns.project(handles->at(i), column_names);
 		// add each row to the rows vector
 		rows->push_back(row);
 	}
 
-	//Handle memory because select method returns the "new" pointer
+	//Handle memory 
 	//declared in heap
 	delete handles;
 
-	//return the QR of all the information about the columns. This 
-	// will get ouptutted to the terminal for the user to see the progress
+	//return the QR of all the information about the columns. 
 	return new QueryResult(column_names, column_attributes, rows,
 		" successfully returned " + to_string(row_number) + " rows");
 
