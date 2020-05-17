@@ -10,6 +10,7 @@ using namespace hsql;
 
 // define static data
 Tables *SQLExec::tables = nullptr;
+Indices *SQLExec::indices = nullptr;
 
 // make query result be printable
 ostream &operator<<(ostream &out, const QueryResult &qres) {
@@ -69,6 +70,9 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
     // FIXME: initialize _tables table, if not yet present
     if (SQLExec::tables == nullptr)
         SQLExec::tables = new Tables();
+
+    if (SQLExec::indices == nullptr)
+        SQLExec::indices = new Indices();
     try {
         switch (statement->type()) {
             case kStmtCreate:
@@ -107,18 +111,18 @@ SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name,
   }
 }
 
-// QueryResult *SQLExec::create(const CreateStatement *statement) {
-//     switch (statement->type) {
-//         case CreateStatement::kTable:
-//             return create_table(statement);
-//         case CreateStatement::kIndex:
-//             return create_index(statement);
-//         default:
-//             return new QueryResult("Only CREATE TABLE and CREATE INDEX are implemented");
-//     }
-// }
-
 QueryResult *SQLExec::create(const CreateStatement *statement) {
+    switch (statement->type) {
+        case CreateStatement::kTable:
+            return create_table(statement);
+        case CreateStatement::kIndex:
+            return create_index(statement);
+        default:
+            return new QueryResult("Only CREATE TABLE and CREATE INDEX are implemented");
+    }
+}
+
+QueryResult *SQLExec::create_table(const CreateStatement *statement) {
     //return new QueryResult("create table not implemented");  // FIXME
     // Check if the statement is a create table statement or not
     if (statement->type != CreateStatement::kTable) {
@@ -195,13 +199,75 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
 }
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement) {
-    return new QueryResult("create index not implemented");  // FIXME
+    //return new QueryResult("create index not implemented");  // FIXME
+    if(statement->type != CreateStatement::kIndex){
+        return new QueryResult("CREATE INDEX is only statement handled.");
+    }
+
+    Identifier table_name = statement->tableName;
+    Identifier index_name = statement->indexName;
+    Identifier index_type;
+    //ColumnNames column_names;
+    bool is_unique;
+    
+    
+    try{
+        index_type = statement->indexType;
+    }catch (exception& e){
+        index_type = "BTREE";
+    }
+
+    if (index_type == "BTREE"){
+        is_unique = true;
+    }else{
+        is_unique = false;
+    }
+
+    ValueDict row;
+    row["table_name"] = table_name;
+    row["index_name"] = index_name;
+    row["seq_in_index"] = 0;
+    row["index_type"] = index_type;
+    row["is_unique"] = is_unique;
+
+    Handles index_handles;
+    try{
+        for(auto const& col : *statement->indexColumns){
+            row["seq_in_index"].n += 1;
+			row["column_name"] = string(col);
+			index_handles.push_back(SQLExec::indices->insert(&row));
+        }
+        DbIndex& index = SQLExec::indices->get_index(table_name, index_name);
+		index.create();
+
+    }catch(exception& e){
+        try{
+            for (auto const &handle: index_handles) {
+                   SQLExec::indices->del(handle);
+            }
+        }catch(...){}
+        throw;
+    }
+
+    return new QueryResult("created index" + index_name);
 }
+
+QueryResult *SQLExec::drop(const DropStatement *statement) {
+	switch (statement->type) {
+	case DropStatement::kTable:
+		return drop_table(statement);
+	case DropStatement::kIndex:
+		return drop_index(statement);
+	default:
+		return new QueryResult("Only DROP TABLE and CREATE INDEX are implemented");
+	}
+}
+
 
 // DROP ...
 // Method that takes in the SQL statement to drop a table, and it deletes the data from the
 // columns schema and proceeds to drop the table
-QueryResult *SQLExec::drop(const DropStatement *statement) {
+QueryResult *SQLExec::drop_table(const DropStatement *statement) {
     //return new QueryResult("not implemented"); // FIXME
     // Check if the statement is a drop table statement, and throw an exception if it isn't
     if (statement->type != DropStatement::kTable) {
@@ -232,6 +298,37 @@ QueryResult *SQLExec::drop(const DropStatement *statement) {
     // Return a query result saying that the specified table has been dropped
     return new QueryResult(string("Dropped ") + table_name);
 
+}
+
+QueryResult *SQLExec::drop_index(const DropStatement *statement) {
+
+	//Double check if statement is DROP Index
+	if (statement->type != DropStatement::kIndex)
+		return new QueryResult("Only handle DROP INDEX");
+
+
+	// get the table name and index name
+	Identifier table_name = statement->name;
+	Identifier index_name = statement->indexName;
+	// get the index from the database 
+	DbIndex& index = SQLExec::indices->get_index(table_name, index_name);
+	ValueDict where;
+	 
+	where["table_name"] = table_name;
+	where["index_name"] = index_name;
+
+	Handles* index_handles = SQLExec::indices->select(&where);
+	index.drop();
+	// iterate the index handles and remove 
+	for (auto const &handle: *index_handles) {
+		SQLExec::indices->del(handle);
+	}
+
+
+	//Handle memory because select method returns the "new" pointer
+	delete index_handles;
+
+	return new QueryResult("dropped index " + index_name);
 }
 
 QueryResult *SQLExec::show(const ShowStatement *statement) {
