@@ -65,6 +65,11 @@ QueryResult::~QueryResult() {
 
 }
 
+/**
+ * Execute SQL statement
+ * @param statement SQL statement to execute
+ * @return          query execution result
+ */
 
 QueryResult *SQLExec::execute(const SQLStatement *statement) {
     // FIXME: initialize _tables table, if not yet present
@@ -111,6 +116,12 @@ SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name,
   }
 }
 
+/**
+ * create table or index with given statement
+ * @param statement given statement 
+ * @return          query execution result
+ */
+
 QueryResult *SQLExec::create(const CreateStatement *statement) {
     switch (statement->type) {
         case CreateStatement::kTable:
@@ -122,6 +133,12 @@ QueryResult *SQLExec::create(const CreateStatement *statement) {
     }
 }
 
+
+/**
+ * Create a table with a given statement
+ * @param statement given statement
+ * @return          query execution result
+ */
 QueryResult *SQLExec::create_table(const CreateStatement *statement) {
     //return new QueryResult("create table not implemented");  // FIXME
     // Check if the statement is a create table statement or not
@@ -198,29 +215,19 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement) {
 
 }
 
+/**
+ * Create an index for a table with a given statement
+ * @param statement given statement 
+ * @return          query execution result
+ */
+
 QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     //return new QueryResult("create index not implemented");  // FIXME
 
+    // Initialize identifier objects 
     Identifier table_name = statement->tableName;
     Identifier index_name = statement->indexName;
     char *index_type = statement->indexType;
-    //Identifier index_type;
-    // bool is_unique; 
-
-	// try {
-	// 	index_type = statement->indexType;
-	// }
-	// catch (exception& e) {
-	// 	index_type = "BTREE";
-	// }
-
-
-	// if (index_type == "BTREE") {
-	// 	is_unique = true;
-	// }
-	// else {
-	// 	is_unique = false;
-	// }
 
     DbRelation& table = SQLExec::tables->get_table(table_name);
     const ColumnNames& columns = table.get_column_names();
@@ -228,24 +235,27 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
         if (find(columns.begin(), columns.end(), col) == columns.end())
             throw SQLExecError("column " + string(col) + " doesn't exist");
     }
-
+    //make row for new indices
     ValueDict row;
     row["table_name"] = Value(table_name);
     row["index_name"] = Value(index_name);
-    //row["seq_in_index"] = 0;
+    
     row["index_type"] = Value(index_type);
     row["is_unique"] = Value(string(index_type) == "BTREE" ? true : false);
 
+    // hold handles of inserting row for possible rollback when catch exception
     Handles index_handles;
     int seq_in_index = 1;
     try{
+        //insert new index(row) to _indices
         for(auto const& col : *statement->indexColumns){
             
-            //row["seq_in_index"].n += 1;
+            
 			row["column_name"] = Value(col);
             row["seq_in_index"] = Value(seq_in_index++);
 			index_handles.push_back(SQLExec::indices->insert(&row));
         }
+        // create index
         DbIndex& index = SQLExec::indices->get_index(table_name, index_name);
 		index.create();
 
@@ -261,6 +271,12 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     return new QueryResult("created index " + index_name);
 }
 
+
+/**
+ * drop table or index with given statement
+ * @param statement given statement 
+ * @return          query execution result
+ */
 QueryResult *SQLExec::drop(const DropStatement *statement) {
 	switch (statement->type) {
 	case DropStatement::kTable:
@@ -273,9 +289,12 @@ QueryResult *SQLExec::drop(const DropStatement *statement) {
 }
 
 
-// DROP ...
-// Method that takes in the SQL statement to drop a table, and it deletes the data from the
-// columns schema and proceeds to drop the table
+
+/**
+ * Drop a table with a given statement
+ * @param statement given statement 
+ * @return          query execution result
+ */
 QueryResult *SQLExec::drop_table(const DropStatement *statement) {
     //return new QueryResult("not implemented"); // FIXME
     // Check if the statement is a drop table statement, and throw an exception if it isn't
@@ -309,6 +328,11 @@ QueryResult *SQLExec::drop_table(const DropStatement *statement) {
 
 }
 
+/**
+ * Drop an index with a given statement
+ * @param statement given statement 
+ * @return          query execution result
+ */
 QueryResult *SQLExec::drop_index(const DropStatement *statement) {
 
 	//Double check if statement is DROP Index
@@ -340,6 +364,13 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement) {
 	return new QueryResult("dropped index " + index_name);
 }
 
+
+
+/**
+ * show table, columns or index with given statement
+ * @param statement given statement
+ * @return          query execution result
+ */
 QueryResult *SQLExec::show(const ShowStatement *statement) {
     switch (statement->type) {
         case ShowStatement::kTables:
@@ -353,14 +384,13 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
     }
 }
 
-// QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-//     return new QueryResult("not implemented"); // FIXME
-// }
 
-// Show all of the indices from a given table
-// @param SQL statement with a SHOW INDEX statement within it
-// @return QueryResult that shows all the indices at the specified
-// table and indication that the query completed
+/**
+* Show all of the indices from a given table
+* @param SQL statement with a SHOW INDEX statement within it
+* @return QueryResult that shows all the indices at the specified
+* table and indication that the query complete
+*/
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
     //    return new QueryResult("not implemented"); // FIXME
     // Create DbRelation object that will work with the indices table
@@ -401,9 +431,14 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
                             to_string(n) + " indices");
 }
 
-
+/**
+* show tables
+* @param statement     given statement 
+* @return              query execution result
+*/
 QueryResult *SQLExec::show_tables() {
     //return new QueryResult("not implemented"); // FIXME
+    //Get columns for a specific table
     ColumnNames *column_names = new ColumnNames;
     column_names->push_back("table_name");
     
@@ -411,7 +446,7 @@ QueryResult *SQLExec::show_tables() {
     column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
     
     Handles *handles = SQLExec::tables->select();
-    
+    //Number of returned rows in result, minus 3 means minus "_tables", "_columns" and "_indices"
     u_long row_number = handles->size() - 3;
     ValueDicts *rows = new ValueDicts;
     
@@ -429,22 +464,32 @@ QueryResult *SQLExec::show_tables() {
 
 }
 
+
+/**
+* show columns
+* @param statement     given statement 
+* @return              query execution result
+*/
 QueryResult *SQLExec::show_columns(const ShowStatement *statement) {
     //return new QueryResult("not implemented"); // FIXME
     DbRelation& columns = SQLExec::tables->get_table(Columns::TABLE_NAME);
 
+    //Create Column_names object to store all of the columns information
+    
     ColumnNames * column_names = new ColumnNames;
     column_names->push_back("table_name");
     column_names->push_back("column_name");
     column_names->push_back("data_type");
-
+    
+    // Create ColumnAttributes object to store all of the column attributes
     ColumnAttributes *column_attributes = new ColumnAttributes;
     column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
 
+    // Get columns from the table that the user wants to show 
     ValueDict where;
     where["table_name"] = Value(statement->tableName);
     Handles* handles = columns.select(&where);
-	u_long row_number = handles->size();
+	u_long row_number = handles->size();// Number of returned rows in result
 
 	ValueDicts* rows = new ValueDicts;
 
