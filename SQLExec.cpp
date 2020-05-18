@@ -200,41 +200,50 @@ QueryResult *SQLExec::create_table(const CreateStatement *statement) {
 
 QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     //return new QueryResult("create index not implemented");  // FIXME
-    if(statement->type != CreateStatement::kIndex){
-        return new QueryResult("CREATE INDEX is only statement handled.");
-    }
 
     Identifier table_name = statement->tableName;
     Identifier index_name = statement->indexName;
-    Identifier index_type;
-    //ColumnNames column_names;
-    bool is_unique;
-    
-    
-    try{
-        index_type = statement->indexType;
-    }catch (exception& e){
-        index_type = "BTREE";
-    }
+    char *index_type = statement->indexType;
+    //Identifier index_type;
+    // bool is_unique; 
 
-    if (index_type == "BTREE"){
-        is_unique = true;
-    }else{
-        is_unique = false;
+	// try {
+	// 	index_type = statement->indexType;
+	// }
+	// catch (exception& e) {
+	// 	index_type = "BTREE";
+	// }
+
+
+	// if (index_type == "BTREE") {
+	// 	is_unique = true;
+	// }
+	// else {
+	// 	is_unique = false;
+	// }
+
+    DbRelation& table = SQLExec::tables->get_table(table_name);
+    const ColumnNames& columns = table.get_column_names();
+    for (auto const& col: *statement->indexColumns) {
+        if (find(columns.begin(), columns.end(), col) == columns.end())
+            throw SQLExecError("column " + string(col) + " doesn't exist");
     }
 
     ValueDict row;
-    row["table_name"] = table_name;
-    row["index_name"] = index_name;
-    row["seq_in_index"] = 0;
-    row["index_type"] = index_type;
-    row["is_unique"] = is_unique;
+    row["table_name"] = Value(table_name);
+    row["index_name"] = Value(index_name);
+    //row["seq_in_index"] = 0;
+    row["index_type"] = Value(index_type);
+    row["is_unique"] = Value(string(index_type) == "BTREE" ? true : false);
 
     Handles index_handles;
+    int seq_in_index = 1;
     try{
         for(auto const& col : *statement->indexColumns){
-            row["seq_in_index"].n += 1;
-			row["column_name"] = string(col);
+            
+            //row["seq_in_index"].n += 1;
+			row["column_name"] = Value(col);
+            row["seq_in_index"] = Value(seq_in_index++);
 			index_handles.push_back(SQLExec::indices->insert(&row));
         }
         DbIndex& index = SQLExec::indices->get_index(table_name, index_name);
@@ -249,7 +258,7 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
         throw;
     }
 
-    return new QueryResult("created index" + index_name);
+    return new QueryResult("created index " + index_name);
 }
 
 QueryResult *SQLExec::drop(const DropStatement *statement) {
@@ -259,7 +268,7 @@ QueryResult *SQLExec::drop(const DropStatement *statement) {
 	case DropStatement::kIndex:
 		return drop_index(statement);
 	default:
-		return new QueryResult("Only DROP TABLE and CREATE INDEX are implemented");
+		return new QueryResult("Only DROP TABLE and DROP INDEX are implemented");
 	}
 }
 
@@ -314,8 +323,8 @@ QueryResult *SQLExec::drop_index(const DropStatement *statement) {
 	DbIndex& index = SQLExec::indices->get_index(table_name, index_name);
 	ValueDict where;
 	 
-	where["table_name"] = table_name;
-	where["index_name"] = index_name;
+	where["table_name"] = Value(table_name);
+	where["index_name"] = Value(index_name);
 
 	Handles* index_handles = SQLExec::indices->select(&where);
 	index.drop();
@@ -338,14 +347,60 @@ QueryResult *SQLExec::show(const ShowStatement *statement) {
         case ShowStatement::kColumns:
             return show_columns(statement);
         case ShowStatement::kIndex:
+            return show_index(statement);
         default:
             throw SQLExecError("unrecognized SHOW type");
     }
 }
 
+// QueryResult *SQLExec::show_index(const ShowStatement *statement) {
+//     return new QueryResult("not implemented"); // FIXME
+// }
+
+// Show all of the indices from a given table
+// @param SQL statement with a SHOW INDEX statement within it
+// @return QueryResult that shows all the indices at the specified
+// table and indication that the query completed
 QueryResult *SQLExec::show_index(const ShowStatement *statement) {
-    return new QueryResult("not implemented"); // FIXME
+    //    return new QueryResult("not implemented"); // FIXME
+    // Create DbRelation object that will work with the indices table
+
+    //DbRelation &indices = SQLExec::tables->get_table(Indices::TABLE_NAME);
+    Identifier table_name = statement->tableName;
+    // Create Column_names object to store all of the indices information
+    ColumnNames *column_names = new ColumnNames;
+    column_names->push_back("table_name");
+    column_names->push_back("index_name");
+    column_names->push_back("column_name");
+    column_names->push_back("seq_in_index");   
+    column_names->push_back("index_type");
+    column_names->push_back("is_unique");
+    // Create ColumnAttributes object to store all of the column attributes
+    // For the indices columns
+    ColumnAttributes *column_attributes = new ColumnAttributes;
+    column_attributes->push_back(ColumnAttribute(ColumnAttribute::TEXT));
+    column_attributes->push_back(ColumnAttribute(ColumnAttribute::INT));
+    column_attributes->push_back(ColumnAttribute(ColumnAttribute::BOOLEAN));
+    // Get the table that the user wants to show the indices from
+    ValueDict where;
+    where["table_name"] = Value(statement->tableName);
+    //Handles *handles = indices.select(&where);
+    Handles *handles = SQLExec::indices->select(&where);
+    u_long n = handles->size();
+    ValueDicts *rows = new ValueDicts;
+    // Show all of the indices from that table
+    for (auto const &handle: *handles) {
+        //ValueDict *row = indices.project(handle, column_names);
+        ValueDict *row = SQLExec::indices->project(handle, column_names);
+        rows->push_back(row);
+    }
+    // Delete the handle when you are done with it
+    delete handles;
+    // Return the query result that shows the indices and indicates that it's successful
+    return new QueryResult(column_names, column_attributes, rows, "successfully returned " +
+                            to_string(n) + " indices");
 }
+
 
 QueryResult *SQLExec::show_tables() {
     //return new QueryResult("not implemented"); // FIXME
