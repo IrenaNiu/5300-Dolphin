@@ -312,15 +312,27 @@ QueryResult *SQLExec::drop_table(const DropStatement *statement) {
     where["table_name"] = Value(table_name);
     // Create a DbRelation for the table that the user wants to drop
     DbRelation& table = SQLExec::tables->get_table(table_name);
+
+    // remove indices
+    for (auto const &index_name: SQLExec::indices->get_index_names(table_name)) {
+        DbIndex &index = SQLExec::indices->get_index(table_name, index_name);
+        index.drop();  // drop the index
+    }
+    Handles *handles = SQLExec::indices->select(&where);
+    for (auto const &handle: *handles)
+        SQLExec::indices->del(handle);  // remove all rows from _indices
+    delete handles;
+
     // First remove data from the columns schema before dropping the table
     DbRelation& columns = SQLExec::tables->get_table(Columns::TABLE_NAME);
-    Handles* handles = columns.select(&where);
+    handles = columns.select(&where);
     for (auto const& handle: *handles) {
         columns.del(handle);
     }
     delete handles;
     // Drop the table
     table.drop();
+    
     // Remove that dropped table from the table schema
     SQLExec::tables->del(*SQLExec::tables->select(&where)->begin());
     // Return a query result saying that the specified table has been dropped
