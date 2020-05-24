@@ -3,7 +3,7 @@ DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2020
 
 ## Sprint Invierno
 **Milestone 5:**
-Insert, Delete, Simple Queries - rudimentary implementation of certain INSERT, DELETE and simple SELECT statements.
+Insert, Delete, Simple Queries - rudimentary implementation of certain INSERT, DELETE and simple SELECT statements.</br>
 
 **General Steps:** </br>
 1. Git clone or download this repo
