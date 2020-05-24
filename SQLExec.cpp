@@ -74,12 +74,30 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
                 return drop((const DropStatement *) statement);
             case kStmtShow:
                 return show((const ShowStatement *) statement);
+            case kStmtInsert:
+                return insert((const InsertStatement *) statement);
+            case kStmtDelete:
+                return del((const DeleteStatement *) statement);
+            case kStmtSelect:
+                return select((const SelectStatement *) statement);
             default:
                 return new QueryResult("not implemented");
         }
     } catch (DbRelationError &e) {
         throw SQLExecError(string("DbRelationError: ") + e.what());
     }
+}
+
+QueryResult *SQLExec::insert(const InsertStatement *statement) {
+    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::del(const DeleteStatement *statement) {
+    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+}
+
+QueryResult *SQLExec::select(const SelectStatement *statement) {
+    return new QueryResult("SELECT statement not yet implemented");  // FIXME
 }
 
 void
@@ -172,15 +190,15 @@ QueryResult *SQLExec::create_index(const CreateStatement *statement) {
     // check that given columns exist in table
     const ColumnNames &table_columns = table.get_column_names();
     for (auto const &col_name: *statement->indexColumns)
-        if (std::find(table_columns.begin(), table_columns.end(), col_name) == table_columns.end())
-            throw SQLExecError(std::string("Column '") + col_name + "' does not exist in " + table_name);
+        if (find(table_columns.begin(), table_columns.end(), col_name) == table_columns.end())
+            throw SQLExecError(string("Column '") + col_name + "' does not exist in " + table_name);
 
     // insert a row for every column in index into _indices
     ValueDict row;
     row["table_name"] = Value(table_name);
     row["index_name"] = Value(index_name);
     row["index_type"] = Value(statement->indexType);
-    row["is_unique"] = Value(std::string(statement->indexType) == "BTREE"); // assume HASH is non-unique --
+    row["is_unique"] = Value(string(statement->indexType) == "BTREE"); // assume HASH is non-unique --
     int seq = 0;
     Handles i_handles;
     try {
@@ -322,7 +340,7 @@ QueryResult *SQLExec::show_index(const ShowStatement *statement) {
     }
     delete handles;
     return new QueryResult(column_names, column_attributes, rows,
-                           "successfully returned " + std::to_string(n) + " rows");
+                           "successfully returned " + to_string(n) + " rows");
 }
 
 QueryResult *SQLExec::show_tables() {
