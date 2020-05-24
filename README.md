@@ -14,6 +14,9 @@ Insert, Delete, Simple Queries - rudimentary implementation of certain INSERT, D
 
 **Test Steps for M5:** (Create Table, Show Table/Columns and Drop Table)
 ```sql
+SQL> create table goober (x int, y int, z int)
+CREATE TABLE goober (x INT, y INT, z INT)
+created goober
 SQL> show tables
 SHOW TABLES
 table_name 
