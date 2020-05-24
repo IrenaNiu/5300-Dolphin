@@ -303,7 +303,9 @@ bool HeapTable::selected(Handle handle, const ValueDict *where) {
     if (where == nullptr)
         return true;
     ValueDict *row = this->project(handle, where);
-    return *row == *where;
+    bool is_selected = *row == *where;
+    delete row;
+    return is_selected;
 }
 
 /**
@@ -335,11 +337,11 @@ bool test_compare(DbRelation &table, Handle handle, int a, string b) {
     }
     value = (*result)["b"];
     if (value.s != b) {
-		delete result;
+        delete result;
         return false;
-	}
+    }
     value = (*result)["c"];
-	delete result;
+    delete result;
     if (value.n != (a % 2 == 0))
         return false;
     return true;
