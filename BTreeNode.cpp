@@ -417,7 +417,7 @@ Insertion BTreeLeaf::insert(const KeyValue *key, Handle handle) {
     // cout << "inserting " << (*key)[0] << " into leaf " << id << endl; // DEBUG
     // check unique
     if (this->key_map.find(*key) != this->key_map.end()) {
-        //file.drop();
+        file.drop();
         throw DbRelationError("Duplicate keys are not allowed in unique index");
     }
 
