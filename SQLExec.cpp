@@ -4,6 +4,7 @@
  * @see "Seattle University, CPSC5300, Spring 2020"
  */
 #include "SQLExec.h"
+#include "EvalPlan.h"
 
 using namespace std;
 using namespace hsql;
@@ -163,7 +164,7 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
     ColumnAttributes *column_attributes = table.get_column_attributes(*column_names);
     //Start base of plan at tablescan
     EvalPlan *plan = new EvalPlan(table);
-    
+
     if(statement->whereClause != nullptr){
         plan = new EvalPlan(get_where_conjunction(statement->whereClause), plan);
     }
