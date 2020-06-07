@@ -70,8 +70,7 @@ void BTreeIndex::close() {
 // Find all the rows whose columns are equal to key. Assumes key is a dictionary whose keys are the column
 // names in the index. Returns a list of row handles.
 Handles *BTreeIndex::lookup(ValueDict *key_dict) const {
-    // FIXME
-    return nullptr;
+    return this->_lookup(this->root, this->stat->get_height(), this->tkey(key_dict));
 }
 
 Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
