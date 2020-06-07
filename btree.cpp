@@ -185,7 +185,7 @@ bool test_btree() {
     column_names.push_back("a");
     BTreeIndex index(table, "fooindex", column_names, true);
     index.create();
-    return true;  // FIXME
+    //return true;  // FIXME
 
 
     ValueDict lookup;
@@ -229,6 +229,7 @@ bool test_btree() {
             delete handles;
             delete result;
         }
+    return true;  // FIXME
 
     // test delete
     ValueDict row;
