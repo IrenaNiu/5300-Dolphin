@@ -95,9 +95,9 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
  * @return          query execution result
  */
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
-    //Get table name from statment
+    // Get table name from statment
     Identifier table_name = statement->tableName;
-    //Get table from tables
+    // Get table from tables
     DbRelation& table = SQLExec::tables->get_table(table_name);
 
     ColumnNames column_names;
@@ -105,7 +105,7 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
     ValueDict row;
     uint i = 0;
     Handle insertHandle;
-    //Handle when no column given (default)
+    // Handle when no column given (default)
     if (statement->columns != nullptr) {
         for (auto const& col : *statement->columns) {
             column_names.push_back(col);
@@ -115,8 +115,8 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
         for (auto const& col: table.get_column_names()) {
             column_names.push_back(col);
         }
-    }
-    //insert into row
+    } 
+    // Get values
     for (auto const& col : *statement->values) {
         switch (col->type) {
             case kExprLiteralString:
@@ -131,14 +131,14 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
                 return new QueryResult("Invalid data type");
         }
     }
-    //Insert row to table
+    // Insert row to table
     insertHandle = table.insert(&row); 
     IndexNames index_names = SQLExec::indices->get_index_names(table_name);
     for (Identifier ind_name : index_names) {
         DbIndex& index = SQLExec::indices->get_index(table_name, ind_name);
         index.insert(insertHandle);
     }
-    //Query index info
+    // Query index info
     string has_indices= "";
     if(index_names.size() >= 1){
         has_indices = " and "+ to_string(index_names.size())+ " indices";
@@ -186,9 +186,49 @@ ValueDict* SQLExec::get_where_conjunction(const Expr *expr) {
     return where;
 }
 
-
+/**
+ * Delete rows from table with a given statement
+ * @param statement given statement for delete
+ * @return          query execution result
+ */
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
-    return new QueryResult("DELETE statement not yet implemented");  // FIXME
+    // Get table name
+    Identifier table = statement->tableName;
+    // Get table from tables
+    DbRelation &tb = SQLExec::tables->get_table(table);
+
+    // Start the evaluation plan with table scan
+    EvalPlan *plan = new EvalPlan(tb);
+    // Extract where clause
+    if (statement->expr != NULL)
+        plan = new EvalPlan(get_where_conjunction(statement->expr), plan);
+
+    EvalPlan *ep = plan->optimize();
+    EvalPipeline pipeline = ep->pipeline();
+
+    // Get indeces and handles
+    Handles *handles = pipeline.second;
+    auto index_names = SQLExec::indices->get_index_names(table);
+
+    u_long n = 0;  // Num of rows returned 
+    u_long m = index_names.size();  // Num of indices
+    // Remove handles from indices
+    for (auto const &handle : *handles)
+    {
+        n++;
+        for (auto const index_name : index_names)
+        {
+            DbIndex &index = SQLExec::indices->get_index(table, index_name);
+            index.del(handle);
+        }
+        // Remove handles from table
+        tb.del(handle);
+    }
+    string has_indices= "";
+
+
+    return new QueryResult("successfully deleted " + to_string(n)+ " rows from "
+                            + table + to_string(m)+ " indices");
 }
 
 /**
