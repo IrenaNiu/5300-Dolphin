@@ -5,6 +5,9 @@ DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2020
 **Milestone 5:** </br>
 Insert, Delete, Simple Queries - rudimentary implementation of certain INSERT, DELETE and simple SELECT statements.</br>
 
+**Milestone 6:** </br>
+Implementation of B+ Tree Index -- just insert and lookup. </br>
+
 **General Steps:** </br>
 1. Git clone or download this repo
 2. Compile the code by runing "make"
@@ -182,7 +185,7 @@ rm -f ../data/*
 ``` 
 
 ## Current Status
-Milestone 5:  </br>
+Milestone 5:  All implementations are successful. </br>
 Milestone 6:  </br>
 
 
