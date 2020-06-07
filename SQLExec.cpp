@@ -228,7 +228,7 @@ QueryResult *SQLExec::del(const DeleteStatement *statement) {
 
 
     return new QueryResult("successfully deleted " + to_string(n)+ " rows from "
-                            + table + to_string(m)+ " indices");
+                            + table + " and " + to_string(m)+ " indices");
 }
 
 /**
