@@ -241,7 +241,7 @@ bool test_btree()
         return false;
     }
     delete handles;
-    /**
+    
     for (uint j = 0; j < 10; j++)
         for (int i = 0; i < 1000; i++) {
             lookup["a"] = i + 100;
@@ -256,7 +256,7 @@ bool test_btree()
             delete handles;
             delete result;
         }
-**/
+    /**
     for (uint j = 0; j < 2; j++)
         for (int i = 0; i < 39; i++)
         {
@@ -273,6 +273,7 @@ bool test_btree()
             delete handles;
             delete result;
         }
+    **/
     return true; // Only test for lookup
 
     // test delete
