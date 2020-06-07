@@ -79,6 +79,26 @@ Handles *BTreeIndex::range(ValueDict *min_key, ValueDict *max_key) const {
     // FIXME
 }
 
+// Helper function for lookup
+Handles* BTreeIndex::_lookup(BTreeNode *node, uint height, const KeyValue* key) const {
+    Handles* handles = new Handles;
+    BTreeLeaf* leaf = nullptr;
+    if(height == 1) {
+        leaf = (BTreeLeaf*)node;
+        try { 
+            handles->push_back(leaf->find_eq(key)); 
+        }
+        catch (...) { 
+            return handles; 
+        }
+        return handles;
+
+    }
+    else {
+        return this->_lookup(((BTreeInterior*)node)->find(key, height), height - 1, key);
+    }
+}
+
 // Insert a row with the given handle. Row must exist in relation already.
 void BTreeIndex::insert(Handle handle) {
     open();
