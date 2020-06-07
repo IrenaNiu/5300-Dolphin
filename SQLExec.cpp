@@ -152,7 +152,7 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
  * @param statement given expression
  * @return          ValueDict where
  */
-ValueDict* get_where_conjunction(const Expr *expr) {
+ValueDict* SQLExec::get_where_conjunction(const Expr *expr) {
     
     ValueDict *where = new ValueDict();
     
