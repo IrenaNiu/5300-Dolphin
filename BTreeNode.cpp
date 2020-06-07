@@ -370,6 +370,7 @@ BTreeLeaf::BTreeLeaf(HeapFile &file, BlockID block_id, const KeyProfile &key_pro
                 // record i-1: handle, record i: key
                 KeyValue *key_value = get_key(i);
                 this->key_map[*key_value] = get_handle(i - 1);
+                delete key_value;
             }
             i++;
         }
@@ -416,7 +417,7 @@ Insertion BTreeLeaf::insert(const KeyValue *key, Handle handle) {
     // cout << "inserting " << (*key)[0] << " into leaf " << id << endl; // DEBUG
     // check unique
     if (this->key_map.find(*key) != this->key_map.end()) {
-        file.drop();
+        //file.drop();
         throw DbRelationError("Duplicate keys are not allowed in unique index");
     }
 

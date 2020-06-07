@@ -147,7 +147,9 @@ Insertion BTreeIndex::_insert(BTreeNode *node, uint height, const KeyValue *key,
     else
     {
         auto *interior = dynamic_cast<BTreeInterior *>(node);
-        Insertion insertion = _insert(interior->find(key, height), height - 1, key, handle);
+        auto *child = interior->find(key, height);
+        Insertion insertion = _insert(child, height - 1, key, handle);
+        delete child;
         if (!BTreeNode::insertion_is_none(insertion))
             insertion = interior->insert(&insertion.second, insertion.first);
         return insertion;
@@ -209,6 +211,7 @@ bool test_btree() {
     column_names.push_back("a");
     BTreeIndex index(table, "fooindex", column_names, true);
     index.create();
+
     ValueDict lookup;
     lookup["a"] = 12;
     Handles *handles = index.lookup(&lookup);
@@ -243,6 +246,7 @@ bool test_btree() {
         return false;
     }
     delete handles;
+
     for (uint j = 0; j < 10; j++)
         for (int i = 0; i < 1000; i++) {
             lookup["a"] = i + 100;
@@ -261,6 +265,7 @@ bool test_btree() {
             delete handles;
             delete result;
         }
+
     /*  FIXME - put the following back in for future milestones once we have the functionality in place
     // test delete
     ValueDict row;
@@ -286,6 +291,7 @@ bool test_btree() {
         return false;
     }
     delete handles;
+
     // test range
     ValueDict minkey, maxkey;
     minkey["a"] = 100;
@@ -304,6 +310,7 @@ bool test_btree() {
     for (auto vd: *results)
         delete vd;
     delete results;
+
     // test range from beginning and to end
     handles = index.range(nullptr, nullptr);
     u_long count_i = handles->size();
@@ -325,6 +332,7 @@ bool test_btree() {
         return false;
     }
      */
+
     index.drop();
     table.drop();
     return true;
