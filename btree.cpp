@@ -183,8 +183,7 @@ void BTreeIndex::build_key_profile()
         key_profile.push_back(types_by_colname[column_name]);
 }
 
-bool test_btree()
-{
+bool test_btree() {
     ColumnNames column_names;
     column_names.push_back("a");
     column_names.push_back("b");
@@ -200,8 +199,7 @@ bool test_btree()
     row2["b"] = Value(101);
     table.insert(&row1);
     table.insert(&row2);
-    for (int i = 0; i < 100 * 1000; i++)
-    {
+    for (int i = 0; i < 100 * 1000; i++) {
         ValueDict row;
         row["a"] = Value(i + 100);
         row["b"] = Value(-i);
@@ -211,13 +209,15 @@ bool test_btree()
     column_names.push_back("a");
     BTreeIndex index(table, "fooindex", column_names, true);
     index.create();
-
     ValueDict lookup;
     lookup["a"] = 12;
     Handles *handles = index.lookup(&lookup);
+    if (handles->size() == 0) {
+        std::cout << "first lookup failed" << std::endl;
+        return false;
+    }
     ValueDict *result = table.project(handles->back());
-    if (*result != row1)
-    {
+    if (*result != row1) {
         std::cout << "first lookup failed" << std::endl;
         return false;
     }
@@ -225,9 +225,12 @@ bool test_btree()
     delete result;
     lookup["a"] = 88;
     handles = index.lookup(&lookup);
+    if (handles->size() == 0) {
+        std::cout << "second lookup failed" << std::endl;
+        return false;
+    }
     result = table.project(handles->back());
-    if (*result != row2)
-    {
+    if (*result != row2) {
         std::cout << "second lookup failed" << std::endl;
         return false;
     }
@@ -235,47 +238,30 @@ bool test_btree()
     delete result;
     lookup["a"] = 6;
     handles = index.lookup(&lookup);
-    if (handles->size() != 0)
-    {
+    if (handles->size() != 0) {
         std::cout << "third lookup failed" << std::endl;
         return false;
     }
     delete handles;
-    
     for (uint j = 0; j < 10; j++)
         for (int i = 0; i < 1000; i++) {
             lookup["a"] = i + 100;
             handles = index.lookup(&lookup);
+            if (handles->size() == 0) {
+                std::cout << "lookup failed a = " << lookup["a"] << std::endl;
+                return false;
+            }
             result = table.project(handles->back());
             row1["a"] = i + 100;
             row1["b"] = -i;
             if (*result != row1) {
-                std::cout << "lookup failed " << i << std::endl;
+                std::cout << "lookup value failed a = " << row1["a"] << std::endl;
                 return false;
             }
             delete handles;
             delete result;
         }
-    /**
-    for (uint j = 0; j < 2; j++)
-        for (int i = 0; i < 39; i++)
-        {
-            lookup["a"] = i + 100;
-            handles = index.lookup(&lookup);
-            result = table.project(handles->back());
-            row1["a"] = i + 100;
-            row1["b"] = -i;
-            if (*result != row1)
-            {
-                std::cout << "lookup failed " << i << std::endl;
-                return false;
-            }
-            delete handles;
-            delete result;
-        }
-    **/
-    return true; // Only test for lookup
-
+    /*  FIXME - put the following back in for future milestones once we have the functionality in place
     // test delete
     ValueDict row;
     row["a"] = 44;
@@ -287,8 +273,7 @@ bool test_btree()
     thandle = handles->back();
     delete handles;
     result = table.project(thandle);
-    if (*result != row)
-    {
+    if (*result != row) {
         std::cout << "44 lookup failed" << std::endl;
         return false;
     }
@@ -296,23 +281,19 @@ bool test_btree()
     index.del(thandle);
     table.del(thandle);
     handles = index.lookup(&lookup);
-    if (handles->size() != 0)
-    {
+    if (handles->size() != 0) {
         std::cout << "delete failed" << std::endl;
         return false;
     }
     delete handles;
-
     // test range
     ValueDict minkey, maxkey;
     minkey["a"] = 100;
     maxkey["a"] = 310;
     handles = index.range(&minkey, &maxkey);
     ValueDicts *results = table.project(handles);
-    for (int i = 0; i < 210; i++)
-    {
-        if (results->at(i)->at("a") != Value(100 + i))
-        {
+    for (int i = 0; i < 210; i++) {
+        if (results->at(i)->at("a") != Value(100 + i)) {
             ValueDict *wrong = results->at(i);
             std::cout << "range failed: " << i << ", a: " << wrong->at("a").n << ", b: " << wrong->at("b").n
                       << std::endl;
@@ -320,18 +301,16 @@ bool test_btree()
         }
     }
     delete handles;
-    for (auto vd : *results)
+    for (auto vd: *results)
         delete vd;
     delete results;
-
     // test range from beginning and to end
     handles = index.range(nullptr, nullptr);
     u_long count_i = handles->size();
     delete handles;
     handles = table.select();
     u_long count_t = handles->size();
-    if (count_i != count_t)
-    {
+    if (count_i != count_t) {
         std::cout << "full range failed: " << count_i << std::endl;
         return false;
     }
@@ -341,11 +320,11 @@ bool test_btree()
     handles = index.range(nullptr, nullptr);
     count_i = handles->size();
     delete handles;
-    if (count_i != 0)
-    {
+    if (count_i != 0) {
         std::cout << "delete everything failed: " << count_i << std::endl;
         return false;
     }
+     */
     index.drop();
     table.drop();
     return true;
