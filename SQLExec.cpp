@@ -146,12 +146,51 @@ QueryResult *SQLExec::insert(const InsertStatement *statement) {
                            + table_name + has_indices);
 }
 
+
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
     return new QueryResult("DELETE statement not yet implemented");  // FIXME
 }
 
+/**
+ * Select rows from table with a given statement
+ * @param statement given statement for select
+ * @return          query execution result
+ */
 QueryResult *SQLExec::select(const SelectStatement *statement) {
-    return new QueryResult("SELECT statement not yet implemented");  // FIXME
+    Identifier table_name = statement->fromTable->getName();
+    DbRelation& table = SQLExec::tables->get_table(table_name);
+    ColumnNames *column_names = new ColumnNames;
+    ColumnAttributes *column_attributes = table.get_column_attributes(*column_names);
+    //Start base of plan at tablescan
+    EvalPlan *plan = new EvalPlan(table);
+    
+    if(statement->whereClause != nullptr){
+        plan = new EvalPlan(get_where_conjunction(statement->whereClause), plan);
+    }
+    if (statement->selectList != nullptr){
+        for (auto const& expr : *statement->selectList)
+        {
+            if (expr->type == kExprStar){
+                ColumnNames get_column_names = table.get_column_names();
+
+                for (auto const &col : get_column_names)
+                    column_names->push_back(col);
+            }else if (expr->type == kExprColumnRef)
+                column_names->push_back(string(expr->name));
+
+            else{
+                    column_names->push_back(string(expr->name));
+
+            }
+        }
+        plan = new EvalPlan(column_names, plan);
+
+    }
+    EvalPlan *optimized = plan->optimize();
+    ValueDicts *rows = optimized->evaluate();
+
+    return new QueryResult(column_names, column_attributes, rows,
+                           "successfully returned " + to_string(rows->size()) + " rows");
 }
 
 void
