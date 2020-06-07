@@ -194,6 +194,45 @@ QueryResult *SQLExec::select(const SelectStatement *statement) {
                            "successfully returned " + to_string(rows->size()) + " rows");
 }
 
+/**
+ * Extract WHERE from expression conjunction (AND, and, =)
+ * @param statement given expression
+ * @return          ValueDict where
+ */
+ValueDict* get_where_conjunction(const Expr *expr) {
+    
+    ValueDict *where = new ValueDict();
+    
+    switch(expr->opType) {
+        case Expr::SIMPLE_OP: {
+            if(expr->opChar == '=') {
+                if(expr->expr2->type == kExprLiteralInt)
+                    where->emplace(string(expr->expr->name), Value(expr->expr2->ival));
+                else if (expr->expr2->type == kExprLiteralString)
+                    where->emplace(string(expr->expr->name), Value(expr->expr2->name));
+                else
+                    throw SQLExecError("unrecognized literal type");
+            }
+            else
+                throw SQLExecError("unrecognized operation type");
+            break;
+        }
+        case Expr::AND: {
+            ValueDict* whereLeft = get_where_conjunction(expr->expr);
+            ValueDict* whereRight = get_where_conjunction(expr->expr2);
+            where->insert(whereLeft->begin(), whereLeft->end());
+            where->insert(whereRight->begin(), whereRight->end());
+            delete whereLeft;
+            delete whereRight;
+            break;
+        }
+        default:
+            throw SQLExecError("unrecognized operation type");
+            break;
+    }
+    return where;
+}
+
 void
 SQLExec::column_definition(const ColumnDefinition *col, Identifier &column_name, ColumnAttribute &column_attribute) {
     column_name = col->name;
