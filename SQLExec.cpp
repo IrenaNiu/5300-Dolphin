@@ -1,6 +1,6 @@
 /**
  * @file SQLExec.cpp - implementation of SQLExec class
- * @author Kevin Lundeen
+ * @author Kevin Lundeen, Yi Niu
  * @see "Seattle University, CPSC5300, Spring 2020"
  */
 #include "SQLExec.h"
@@ -88,8 +88,62 @@ QueryResult *SQLExec::execute(const SQLStatement *statement) {
     }
 }
 
+/**
+ * Insert row into table with a given statement
+ * @param statement given statement for insertion
+ * @return          query execution result
+ */
 QueryResult *SQLExec::insert(const InsertStatement *statement) {
-    return new QueryResult("INSERT statement not yet implemented");  // FIXME
+    //Get table name from statment
+    Identifier table_name = statement->tableName;
+    //Get table from tables
+    DbRelation& table = SQLExec::tables->get_table(table_name);
+
+    ColumnNames column_names;
+    ColumnAttributes column_attributes;
+    ValueDict row;
+    uint i = 0;
+    Handle insertHandle;
+    //Handle when no column given (default)
+    if (statement->columns != nullptr) {
+        for (auto const& col : *statement->columns) {
+            column_names.push_back(col);
+        }
+    }
+    else {
+        for (auto const& col: table.get_column_names()) {
+            column_names.push_back(col);
+        }
+    }
+    //insert into row
+    for (auto const& col : *statement->values) {
+        switch (col->type) {
+            case kExprLiteralString:
+                row[column_names[i]] = Value(col->name);
+                i++;
+                break;
+            case kExprLiteralInt:
+                row[column_names[i]] = Value(col->ival);
+                i++;
+                break;
+            default:
+                return new QueryResult("Invalid data type");
+        }
+    }
+    //Insert row to table
+    insertHandle = table.insert(&row); 
+    IndexNames index_names = SQLExec::indices->get_index_names(table_name);
+    for (Identifier ind_name : index_names) {
+        DbIndex& index = SQLExec::indices->get_index(table_name, ind_name);
+        index.insert(insertHandle);
+    }
+    //Query index info
+    string has_indices= "";
+    if(index_names.size() >= 1){
+        has_indices = " and "+ to_string(index_names.size())+ " indices";
+    }
+    return new QueryResult("Successfully inserted 1 row into "
+                           + table_name + has_indices);
 }
 
 QueryResult *SQLExec::del(const DeleteStatement *statement) {
