@@ -6,7 +6,7 @@ DB Relation Manager project for CPSC5300/4300 at Seattle U, Spring 2020
 Insert, Delete, Simple Queries - rudimentary implementation of certain INSERT, DELETE and simple SELECT statements.</br>
 
 **Milestone 6:** </br>
-Implementation of B+ Tree Index -- just Insert and Lookup. Delete is not implemented.</br>
+Implementation of B+ Tree Index -- Insert and Lookup. Delete is not implemented.</br>
 
 **General Steps:** </br>
 1. Git clone or download this repo
@@ -193,17 +193,6 @@ ok
 test_btree: 
 ...(Loading process of btree)
 ok
-SQL> quit
-```
-**Must clear /data folder before continuing to next steps:**
-```
-rm -f ../data/*
-```
-```
-./sql5300 ../data
-```
-**Test for insert and lookup:**
-```sql
 SQL> create table foo (id int, data text)
 CREATE TABLE foo (id INT, data TEXT)
 created foo
@@ -232,7 +221,7 @@ table_name index_name column_name seq_in_index index_type is_unique
 successfully returned 0 rows
 SQL> delete from foo where data = "two"
 DELETE FROM foo WHERE data = "two"
-successfully deleted 1 rows from foo
+successfully deleted 1 rows from foo and 0 indices
 SQL> select * from foo
 SELECT * FROM foo
 id data 
